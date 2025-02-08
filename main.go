@@ -1,13 +1,16 @@
 package main
 
 import (
-	"fmt"
 	"log"
 )
 
-func main() {
-	fmt.Println("Hello world")
+func trash(data *string) {
+	if data != nil {
+		log.Println(*data)
+	}
+}
 
+func main() {
 	port := "3030"
 	ipAdd := "localhost"
 
@@ -18,11 +21,9 @@ func main() {
 	// Establish a WebSocket connection
 
 	// Handle messages from the server
+	client.On("test", trash)
+	err := client.Emit("test", nil)
 
-	eventTest := "test"
-	testMessage := newSocketIOMessage(EVENT, &eventTest, nil)
-	testMessageByte, err := testMessage.messageToMapOfByte()
-	client.WriteMessage(testMessageByte)
 	if err != nil {
 		log.Println(err)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -39,25 +40,48 @@ func (f *FactoryClient) NewClient() *Client {
 	var wsConn *websocket.Conn
 	url := f.createURLConnection()
 	return &Client{
-		conn: wsConn,
-		url:  url,
+		conn:    wsConn,
+		url:     url,
+		OnEvent: make(map[string]func(*string)),
 	}
 }
 
 type Client struct {
-	url  string
-	conn *websocket.Conn
+	url     string
+	conn    *websocket.Conn
+	OnEvent map[string]func(*string)
 }
 
 func (c *Client) Close() {
 	c.conn.Close()
 }
 
-func (c *Client) WriteMessage(message []byte) {
+func (c *Client) Emit(event string, message interface{}) error {
+	connectionMessage := newSocketIOMessage(EVENT, &event, message)
+	connectionMessageByte, err := connectionMessage.messageToMapOfByte()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	err = c.writeMessage(connectionMessageByte)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) On(event string, handler func(*string)) {
+
+	c.OnEvent[event] = handler
+}
+
+func (c *Client) writeMessage(message []byte) error {
 	err := c.conn.WriteMessage(websocket.TextMessage, message)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
+	return nil
 }
 
 func (c *Client) HandlerServerResponse() {
@@ -65,9 +89,9 @@ func (c *Client) HandlerServerResponse() {
 		_, message, err := c.conn.ReadMessage()
 		if websocket.IsUnexpectedCloseError(err) {
 			log.Println("Websocket is disconnected for unknow reason, trying to reconnect")
-			break
+			c.ConnectionWebSocket()
 		}
-		log.Printf("Received message from the server: %s\n", message)
+		c.handlerServerMessage(string(message))
 	}
 }
 
@@ -82,6 +106,34 @@ func (c *Client) ConnectionWebSocket() {
 	}
 	connectionMessage := newSocketIOMessage(CONNECT, nil, nil)
 	connectionMessageByte, _ := connectionMessage.messageToMapOfByte()
-	log.Println(string(connectionMessageByte))
-	c.WriteMessage(connectionMessageByte)
+	c.writeMessage(connectionMessageByte)
+}
+
+func (c *Client) handlerServerMessage(message string) {
+	var socketIOMessageType string
+	if len(message) > 1 {
+		socketIOMessageType = message[1:2]
+	}
+	switch socketIOMessageType {
+	case CONNECT:
+		if len(message) > 1 {
+			log.Printf("Connection with server, ID is: %s", message[2:])
+		}
+	case EVENT:
+		trimMessage := c.trimMessage(message[2:])
+		value, _ := c.OnEvent[trimMessage[0]]
+		if value != nil {
+			value(&trimMessage[1])
+		}
+	}
+}
+
+func (c *Client) trimMessage(message string) []string {
+	var result []string
+	err := json.Unmarshal([]byte(message), &result)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return nil
+	}
+	return result
 }
