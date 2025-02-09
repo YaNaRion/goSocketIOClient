@@ -4,25 +4,23 @@ import (
 	"log"
 )
 
-func trash(data *string) {
-	if data != nil {
-		log.Println(*data)
-	}
+func testHandler(event EventHandlerInt) {
+	log.Printf("%v", event.Payload())
+	event.Emit("testOn", "BONJOURS FROM SOCKET ON CLIENT SIDE")
 }
 
 func main() {
 	port := "3030"
 	ipAdd := "localhost"
 
-	factoClient := NewFactoryClient(ipAdd, port)
-	client := factoClient.NewClient()
-	client.ConnectionWebSocket()
+	client := Connection(ipAdd, port)
+
 	defer client.Close()
 	// Establish a WebSocket connection
 
 	// Handle messages from the server
-	client.On("test", trash)
-	err := client.Emit("test", nil)
+	client.On("test", testHandler)
+	err := client.Emit("test", "WESH ALORS")
 
 	if err != nil {
 		log.Println(err)

@@ -25,6 +25,13 @@ type FactoryClient struct {
 	IpAddr string
 }
 
+func Connection(Ipaddr string, port string) *Client {
+	factoClient := NewFactoryClient(Ipaddr, port)
+	client := factoClient.NewClient()
+	client.ConnectionWebSocket()
+	return client
+}
+
 func NewFactoryClient(Ipaddr string, port string) *FactoryClient {
 	return &FactoryClient{
 		Port:   port,
@@ -42,14 +49,18 @@ func (f *FactoryClient) NewClient() *Client {
 	return &Client{
 		conn:    wsConn,
 		url:     url,
-		OnEvent: make(map[string]func(*string)),
+		OnEvent: make(map[string]func(EventHandlerInt)),
+		handler: &EventHandler{
+			conn: wsConn,
+		},
 	}
 }
 
 type Client struct {
+	handler *EventHandler
 	url     string
 	conn    *websocket.Conn
-	OnEvent map[string]func(*string)
+	OnEvent map[string]func(EventHandlerInt)
 }
 
 func (c *Client) Close() {
@@ -57,28 +68,20 @@ func (c *Client) Close() {
 }
 
 func (c *Client) Emit(event string, message interface{}) error {
-	connectionMessage := newSocketIOMessage(EVENT, &event, message)
-	connectionMessageByte, err := connectionMessage.messageToMapOfByte()
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	err = c.writeMessage(connectionMessageByte)
+	err := c.handler.Emit(event, message)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Client) On(event string, handler func(*string)) {
-
+func (c *Client) On(event string, handler func(EventHandlerInt)) {
 	c.OnEvent[event] = handler
 }
 
 func (c *Client) writeMessage(message []byte) error {
-	err := c.conn.WriteMessage(websocket.TextMessage, message)
+	err := c.handler.writeMessage(message)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	return nil
@@ -99,6 +102,7 @@ func (c *Client) ConnectionWebSocket() {
 	var err error
 	for {
 		c.conn, _, err = websocket.DefaultDialer.Dial(c.url, nil)
+		c.handler.conn = c.conn
 		if err == nil {
 			break
 		}
@@ -106,7 +110,10 @@ func (c *Client) ConnectionWebSocket() {
 	}
 	connectionMessage := newSocketIOMessage(CONNECT, nil, nil)
 	connectionMessageByte, _ := connectionMessage.messageToMapOfByte()
-	c.writeMessage(connectionMessageByte)
+	err = c.writeMessage(connectionMessageByte)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func (c *Client) handlerServerMessage(message string) {
@@ -123,13 +130,15 @@ func (c *Client) handlerServerMessage(message string) {
 		trimMessage := c.trimMessage(message[2:])
 		value, _ := c.OnEvent[trimMessage[0]]
 		if value != nil {
-			value(&trimMessage[1])
+			c.handler.payload = trimMessage[1]
+			value(*c.handler)
 		}
 	}
 }
 
 func (c *Client) trimMessage(message string) []string {
 	var result []string
+
 	err := json.Unmarshal([]byte(message), &result)
 	if err != nil {
 		fmt.Println("Error:", err)
