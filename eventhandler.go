@@ -1,9 +1,8 @@
 package socketIOClient
 
 import (
-	"log"
-
 	"github.com/gorilla/websocket"
+	"log"
 )
 
 type EventHandlerInt interface {
