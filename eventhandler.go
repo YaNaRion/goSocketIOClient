@@ -6,10 +6,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// type Payload struct {
-// 	message string
-// }
-
 type EventHandlerInt interface {
 	Payload() string
 	Emit(string, ...interface{}) error
