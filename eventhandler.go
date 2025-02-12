@@ -7,7 +7,7 @@ import (
 
 type EventHandlerInt interface {
 	Payload() string
-	Emit(string, ...interface{}) error
+	Emit(string, string) error
 }
 
 type EventHandler struct {
@@ -15,7 +15,7 @@ type EventHandler struct {
 	conn    *websocket.Conn
 }
 
-func (c EventHandler) Emit(event string, message ...interface{}) error {
+func (c EventHandler) Emit(event string, message *string) error {
 	connectionMessage := newSocketIOMessage(EVENT, &event, message)
 	connectionMessageByte, err := connectionMessage.messageToMapOfByte()
 	if err != nil {

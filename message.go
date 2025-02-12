@@ -9,7 +9,7 @@ type SocketIOMessage struct {
 	WSMessage string
 	EventType string
 	EventName string
-	data      interface{}
+	data      *string
 }
 
 func formatEventName(s *string) string {
@@ -19,7 +19,7 @@ func formatEventName(s *string) string {
 	return "/"
 }
 
-func newSocketIOMessage(EventType string, EventName *string, data interface{}) *SocketIOMessage {
+func newSocketIOMessage(EventType string, EventName *string, data *string) *SocketIOMessage {
 	return &SocketIOMessage{
 		WSMessage: MessageWS,
 		EventType: EventType,
