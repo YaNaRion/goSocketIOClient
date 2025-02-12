@@ -38,6 +38,5 @@ func (m *SocketIOMessage) messageToMapOfByte() ([]byte, error) {
 	}
 	payloadString := fmt.Sprintf("[%s, %s]", m.EventName, string(jsonConnect))
 	bytesMessage = append(bytesMessage, []byte(payloadString)...)
-
 	return bytesMessage, nil
 }
