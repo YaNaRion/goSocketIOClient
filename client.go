@@ -67,7 +67,7 @@ func (c *Client) Close() {
 	c.conn.Close()
 }
 
-func (c *Client) Emit(event string, message string) error {
+func (c *Client) Emit(event string, message *string) error {
 	err := c.handler.Emit(event, message)
 	if err != nil {
 		return err
