@@ -7,7 +7,7 @@ import (
 
 type EventHandlerInt interface {
 	Payload() string
-	Emit(string, string) error
+	Emit(string, *string) error
 }
 
 type EventHandler struct {
