@@ -128,21 +128,37 @@ func (c *Client) handlerServerMessage(message string) {
 		}
 	case EVENT:
 		trimMessage := c.trimMessage(message[2:])
-		value, _ := c.OnEvent[trimMessage[0]]
+		value := c.OnEvent[trimMessage.EventName]
 		if value != nil {
-			c.handler.payload = trimMessage[1]
+			c.handler.payload = trimMessage.Data
 			value(*c.handler)
 		}
 	}
 }
 
-func (c *Client) trimMessage(message string) []string {
-	var result []string
+type TrimMessage struct {
+	EventName string
+	Data      string
+}
 
-	err := json.Unmarshal([]byte(message), &result)
+func (c *Client) trimMessage(message string) *TrimMessage {
+	var rawData []interface{}
+	err := json.Unmarshal([]byte(message), &rawData)
 	if err != nil {
-		fmt.Println("Error:", err)
+		fmt.Println("Error parsing JSON:", err)
 		return nil
 	}
-	return result
+
+	var trimMessage TrimMessage
+	if command, ok := rawData[0].(string); ok {
+		trimMessage.EventName = command
+	} else {
+		fmt.Println("Error: Expected a string for the command")
+		return nil
+	}
+	if rawData[1] != nil {
+		trimMessage.Data = fmt.Sprint(rawData[1])
+	}
+
+	return &trimMessage
 }
