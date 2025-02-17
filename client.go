@@ -156,7 +156,7 @@ func (c *Client) trimMessage(message string) *TrimMessage {
 		fmt.Println("Error: Expected a string for the command")
 		return nil
 	}
-	if rawData[1] != nil {
+	if len(rawData) > 1 {
 		trimMessage.Data = fmt.Sprint(rawData[1])
 	}
 
